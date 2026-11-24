@@ -1,0 +1,40 @@
+# In-cluster end-to-end run. Uses the tests image, calls the Services by DNS name, and runs the Jest cluster config.
+# scripts/e2e-k8s.ts deletes and re-applies this Job on every run, because Job specs are immutable.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jwt-e2e
+  namespace: jwt-demo
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: e2e
+          image: jwt-demo:tests
+          imagePullPolicy: IfNotPresent
+          command: ["node", "node_modules/jest/bin/jest.js", "--config", "jest.cluster.config.ts"]
+          env:
+            - name: E2E_AUTH_URL
+              value: http://auth:3001
+            - name: E2E_RESOURCE_URL
+              value: http://resource:3002
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        # Jest writes its cache under /tmp, which is read-only otherwise.
+        - name: tmp
+          emptyDir: {}

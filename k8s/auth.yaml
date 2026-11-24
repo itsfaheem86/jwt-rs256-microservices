@@ -1,0 +1,84 @@
+# Auth service. The only pod that holds the private key: Secret jwt-auth-keys, created at run time by
+# scripts/e2e-k8s.ts. Keep replicas at 1, because refresh-token records live in this process's memory.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: jwt-demo
+  labels:
+    app: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: auth
+          image: jwt-demo:e2e
+          imagePullPolicy: IfNotPresent
+          command: ["node", "dist/services/auth/src/server.js"]
+          ports:
+            - name: http
+              containerPort: 3001
+          env:
+            - name: PORT
+              value: "3001"
+            - name: AUTH_KEY_DIR
+              value: /etc/jwt/keys
+          volumeMounts:
+            - name: auth-keys
+              mountPath: /etc/jwt/keys
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: auth-keys
+          secret:
+            secretName: jwt-auth-keys
+            defaultMode: 0440
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: jwt-demo
+spec:
+  selector:
+    app: auth
+  ports:
+    - name: http
+      port: 3001
+      targetPort: http

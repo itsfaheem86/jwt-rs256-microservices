@@ -1,0 +1,40 @@
+{
+  "name": "jwt-rs256-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Demo: RS256 access tokens across two services, with single-use refresh tokens revoked by family",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "keygen": "tsx scripts/keygen.ts",
+    "dev:auth": "tsx watch services/auth/src/server.ts",
+    "dev:resource": "tsx watch services/resource/src/server.ts",
+    "start:auth": "node dist/services/auth/src/server.js",
+    "start:resource": "node dist/services/resource/src/server.js",
+    "test": "jest",
+    "test:unit": "jest --selectProjects unit",
+    "test:e2e": "jest --selectProjects e2e",
+    "test:cluster": "jest --config jest.cluster.config.ts",
+    "e2e:k8s": "tsx scripts/e2e-k8s.ts"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.20.5",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9"
+  }
+}

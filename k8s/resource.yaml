@@ -1,0 +1,82 @@
+# Resource service. Stateless. It verifies tokens with the public key from ConfigMap jwt-public-key
+# and never mounts the private key Secret.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resource
+  namespace: jwt-demo
+  labels:
+    app: resource
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: resource
+  template:
+    metadata:
+      labels:
+        app: resource
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: resource
+          image: jwt-demo:e2e
+          imagePullPolicy: IfNotPresent
+          command: ["node", "dist/services/resource/src/server.js"]
+          ports:
+            - name: http
+              containerPort: 3002
+          env:
+            - name: PORT
+              value: "3002"
+            - name: PUBLIC_KEY_PATH
+              value: /etc/jwt/public/public.pem
+          volumeMounts:
+            - name: public-key
+              mountPath: /etc/jwt/public
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: public-key
+          configMap:
+            name: jwt-public-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resource
+  namespace: jwt-demo
+spec:
+  selector:
+    app: resource
+  ports:
+    - name: http
+      port: 3002
+      targetPort: http

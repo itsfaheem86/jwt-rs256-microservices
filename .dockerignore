@@ -1,0 +1,10 @@
+node_modules
+dist
+keys
+**/*.pem
+.git
+k8s
+scripts
+plan.md
+README.md
+CLAUDE.md
